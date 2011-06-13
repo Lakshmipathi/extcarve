@@ -1,0 +1,38 @@
+					README 
+					------
+			
+				extcarve.Recovery/Semantic File Carving tool 
+					for ext2FS/ext3FS/ext4FS
+				=======================================
+				   version.0.3
+	
+*About extcarve
+*How to install
+*User Guide and Documents
+
+
+About extcarve:
+==============
+extcarve is a ext2/ext3/ext4 file recovery/Semantic File Carving tool.
+As of now,it can recover file formats like png,jpg,gif,pdf,C/C++ programs,php and html files.
+
+Note : extcarve is an admin tool.So the user should have root user rights to execute it.
+
+How to install:
+============== 
+see INSTALL file
+
+How to use:
+==========
+see HOWTO file
+
+User Guide and Documents
+========================
+For more screencasting/manuals,checkout  www.giis.co.in
+
+You can get me at  <lakshmipathi.g@gmail.com>
+
+-Lakshmipathi.G
+www.giis.co.in
+-Jun 10,2011.
+==================================EOF==================================

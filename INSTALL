@@ -1,0 +1,78 @@
+Introduction
+=============
+extcarve  is designed to recover non-fragmented deleted files  on linux systems that 
+are using the ext2,ext3,ext4 filesystem.
+
+
+****NOTE****
+===========
+DON'T perform installation on the partition where files are deleted,since new any file creation may overwrite deleted file content.
+So install extcarve on a other external drive or pen drive or machine but not the affected partition.
+
+Dependencies
+=============
+The binary installation of extcarve doesn't have any dependency.
+
+The source installation of extcarve (on unaffected machine) has few dependencies. They are :
+	pkg-config
+	e2fslibs-dev
+	
+	Using Ubuntu these can be installed by running the command
+		sudo apt-get install  e2fslibs-dev pkg-config
+
+	Using Fedora this can be installed by running the command
+		sudo yum install pkgconfig e2fsprogs-devel e2fsprogs-libs
+
+Installation general
+=====================
+Installation of extcarve will need root privileges. You should follow these
+steps for both binary and source installation.
+
+Download the tar file into your home directory
+	wget http://www.giis.co.in/giis/<extcarve>_<version>.tar
+
+Extract the tar file into your home directory, which will create  a new 
+directory called extcarve
+	tar -xvf extcarve.tar
+
+Change to the newly created directory
+	cd extcarve
+
+
+Installation of binary
+=======================
+These instructions follow on from Installation General. To install extcarve 
+binary, run the following commands:
+
+Ubuntu
+	sudo sh install_extcarve.sh
+
+Fedora
+	su -
+	sh install_extcarve.sh
+
+This script will place the binary in /usr/bin.
+	 
+Installation from source
+=========================
+These instructions follow on from Installation General. To compile and install 
+extcarve from the source code, run the following commmands:
+
+Method:1
+========
+cd src
+
+Ubuntu
+	sudo gcc `pkg-config --libs ext2fs ` extcarve.c -o extcarve && mv extcarve /usr/bin/
+	
+Fedora
+	su
+	gcc `pkg-config --libs ext2fs ` extcarve.c -o extcarve && mv extcarve /usr/bin/
+
+Method:2
+=======
+	make
+	mv extcarve /usr/bin
+
+This will compile extcarve and move the newly created binary into /usr/bin/
+

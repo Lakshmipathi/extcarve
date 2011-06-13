@@ -1,0 +1,8 @@
+................................................................................................,
+
+2011-06-10  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
+
+	* Release of extcarve 0.3
+	
+			- Uses ext2fs library.
+			- Recovers non-fragmented deleted files.

@@ -1,0 +1,61 @@
+extcarve usage:
+==============
+Once you have succuessfully installed extcarve from either the binary or source code on separate partition or external drive, now you can use 
+this to recover files from deleted drive/partition.
+
+
+Setup-1:
+--------
+For example,I have deleted important files from my root partition (sda1).
+In order to recover them,I have installed extcarve on a pendrive and mounted it at /Pendrive.
+To store any recovered files from extcarve output, I have mounted another (external hdd) on /extcarve
+
+# df
+Filesystem           1K-blocks      Used Available Use% Mounted on
+/dev/sda1            146221624 123091120  15702820  89% /               <---------Affected partition,where files are deleted.
+/dev/sdc1            117218240  79060700  38157540  68% /extcarve       <---------This will be used to save any recovered files.
+/dev/sdb1              3865772   2914640    754760  80% /Pendrive       <---------This contains extcarve executable.
+
+Why this setup?
+Simply we don't want extcarve to messup with original affected partition.If it recognizes some files ,it can recover them otherwise those files
+will remain on /dev/sda1 unrecovered ,gives chance to recover them using other useful :D recovery tools.
+Thus running extcarve doesn't affect original drive,regardless of the extcarve recover files or not.
+
+extcarve stores the recovered files at another drive /extcarve.(Though here its external HDD,It can be pen drive too).
+
+Run method-1:
+------------
+Now lets start running,tool  - 
+# cd /Pendrive
+# ./extcarve -g
+This will prompt you for two inputs - (source and destination)
+-----------
+Please enter the device name:/dev/sda1
+
+Please enter the output directory - (You must provide separate partition/drive's directory) :/extcarve
+-----------
+that's it,check out the output directory /extcarve for any recovered files.
+
+
+Run method-2:
+------------
+There is another way to run this tool - 
+# cd /Pendrive
+# ./extcarve -i
+This will prompt you for three inputs - (source and destination and No.of blocks)
+-----------
+Please enter the device name:/dev/sda1
+
+Please enter the output directory - (You must provide separate partition/drive's directory) :/extcarve
+
+Please enter increased block limit:(default is 12) :
+-----------
+First two inputs are same as the used for "-g" option.Third one is new.Needs some explaination-default block limit 12 refers to how many consecutive blocks, you want to search for a file?For example , In order to recover,a png file, extcarve searches for png header and footer. Lets assume ,extcarve finds png header at unused block (say 10000) , then it will search for footer on next 12 blocks (10000,10001..10012) If it finds them - then those blocks are recovered and save as new file.If it doesn't a footer in 12 blocks. extcarve won't recover the file,since it doesn't find the footer.With default 12 blocks,(If your block size is 4KB),then extcarve will search for file size upto 48KB.
+
+In order to increase this 12 blocks limit ,you use "-i" option.Say you want to recover an important files upto 1MB size,then increase it as -
+--------
+Please enter increased block limit:(default is 12) :256
+--------
+Now as with previous example,png footer will be searched upto block 10256.(256*4KB=1024KB=1MB)
+
+Running extcarve --help will give you more details.
