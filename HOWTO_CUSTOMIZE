@@ -1,0 +1,82 @@
+This file meant for people who are interested in modifing extcarve source code.
+If you have modified source and thought it would be helpful for other too,then
+please sent them as patch to <lakshmipathi.g@gmail.com>.
+----------------------------------------------------------------------
+                        CUSTOMIZE extcarve
+
+What is Magic Signature?
+------------------------
+Magic signature is used to identity file types.For example,a PDF a file often
+begin with header "%PDF" and ends with trailer "%%EOF".Most file has such
+magic signature,they are unique.That's no two file type can have same magic
+signature.
+
+For more,type "man file" and "man magic".
+
+How extcarve works?
+-------------------
+extcarve scans the unused blocks of a  harddisk for header and trailer. If
+finds a match, It save them.Simple :D 
+
+Code :
+-----
+To add more file type to extcarve,first you need find appropriate header and
+trailer/footer values.Best sources would be hexdump,man magic,wiki,google.
+http://en.wikipedia.org/wiki/List_of_file_signatures
+
+
+As you may have noticed,extcarve has just a single file named "extcarve.c".You
+might be interested in two functions namely extcarve_search4header() and
+extcarve_search4footer().By now you must have guessed what these function will
+do.Right? extcarve_search4header - Will search for all headers listed here.
+extcarve_search4footer- Will search for corresponding footer/trailer entries.
+
+Code snippet from extcarve_search4header()-
+
+  //pdf 
+  if ((buf[0] == 0x25 && buf[1] == 0x50 && buf[2] == 0x44 && buf[3] == 0x46
+       && buf[4] == 0x2D ))
+    {
+      //printf ("pdf header found!!!");
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".pdf");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+I have pasted the pdf header part above.As you can see above,the if statement
+compares hexadecimal value of  "%PDF" (25 50 44 46 2d) against  bytes in buffer
+buf.One header is found,header_found flag is set and "blk" number is recored in
+"header_blk" field and dotpart (extention) is stored.
+
+And below is the corresponding footer part from extcarve_search4footer():
+It search for hexdecimal value %%EOF (25 25 45 4f) against the buf.
+One footer is found,footer_found flag is set and "blk" number is recored in 
+"footer_blk" field.
+
+      //pdf 
+      if (buf[i] == 0x25 && buf[i + 1] == 0x25 && buf[i + 2] == 0x45
+	  && buf[i + 3] == 0x4F && buf[i + 4] == 0x46 )
+	{
+	  if (strcmp (needle->dotpart, ".pdf") == 0)
+	    {
+	      needle->footer_blk = blk;
+	      needle->footer_found = 1;
+	      return 1;
+	    }
+	  else
+	    return -1;
+	}
+
+
+Thus If you want to customize extcarve,then add corresponding header code snippet
+at the extcarve_search4header and footer at extcarve_search4footer.
+For convinence,both these functions has a place holder like 
+    //Please add new file type header here
+    //Please add new file type footer here
+
