@@ -1,5 +1,16 @@
 ................................................................................................,
 
+2011-06-20  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
+
+	* Release of extcarve 0.4
+	
+			- Added LaTex (.tex) file format.
+			- Fixed a bug in option "-g".
+			- How to Customize file added.
+			- Improved output display
+			- Fixes to pdf format.
+
+................................................................................................,
 2011-06-10  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
 
 	* Release of extcarve 0.3
