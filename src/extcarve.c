@@ -447,6 +447,37 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       needle->header_found = -1;
       return -1;
     }
+
+  //gzip .tgz file
+  if ((buf[0] == 0x1f && buf[1] == 0x8b))
+    {
+      //printf ("tgz  header found!!!");
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".tgz");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //zip
+  if ((buf[0] == 0x50 && buf[1] == 0x4B && buf[2] == 0x03 && buf[3] == 0x04 ))
+    {
+      //printf ("zip header found!!!%lu",blk);
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".zip");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
   //Please add new file type header here
 
 
@@ -459,7 +490,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 {
   int i = 0;
 // MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
-  if (strcmp (needle->dotpart, ".fig") == 0)
+  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0))
     {
 
       if ((extcarve_is_EOF (-8, buf) == 0)
@@ -588,6 +619,24 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    }
 	  else
 	    return -1;
+	}
+
+      //zip 
+      if (buf[i] == 0x4b && buf[i + 1] == 0x05 && buf[i + 2] == 0x06
+	  && buf[i + 3] == 0x00)
+	{
+	  if (extcarve_is_EOF (i, buf) == 0)
+	    {
+	      if (strcmp (needle->dotpart, ".zip") == 0)
+		{
+		  needle->footer_blk = blk;
+		  needle->footer_found = 1;
+		  needle->footer_offset=i+4;
+		  return 1;
+		}
+	      else
+		return -1;
+	    }
 	}
 
       //Please add new file type footer here
