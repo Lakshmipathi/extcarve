@@ -499,8 +499,32 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       return -1;
     }
 
+  //bzip2 .bz2 file
+  if ((buf[0] == 0x42 && buf[1] == 0x5a && buf[2] == 0x68 && buf[3] == 0x39 && buf[4] == 0x31 && buf[5] == 0x41 && buf[6] == 0x59 && buf[7] == 0x26))
+    {
+      //printf ("bz2  header found!!!");
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".bz2");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
   //Please add new file type header here
 
+
+  //No header matched - check whether its ascii file
+	  
+	if ( extcarve_is_empty(buf) > 0 && needle->header_found != 1 && extcarve_is_ascii(buf)>0){
+		  needle->header_found = 1;
+		  needle->header_blk = blk;
+		  strcpy (needle->dotpart, ".txt");
+		  return 1;
+	}
 
   return 0;
 }
@@ -510,8 +534,15 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 			struct extcarve_meta *needle, unsigned long blk)
 {
   int i = 0;
+	//If empty block found -return 
+	if ( (strcmp (needle->dotpart, ".txt") == 0) && extcarve_is_empty(buf) < 0 ){
+	  needle->footer_blk = blk;
+	  needle->footer_found = 1;
+	  needle->footer_offset=-1;
+	  return 1;
+	}
 // MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
-  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0))
+  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0))
     {
 
       if ((extcarve_is_EOF (-8, buf) == 0)
@@ -692,4 +723,34 @@ extcarve_is_EOF (int i, char buf[EXT2_BLOCK_SIZE])
     return 0;
   else
     return 1;
+}
+
+int extcarve_is_ascii(char buf[EXT2_BLOCK_SIZE])
+{
+int i=0;
+while (i<EXT2_BLOCK_SIZE){
+if(isascii(buf[i++])>0)
+continue;
+else
+return -1;
+}
+return 1;
+}
+
+//check whether given block is empty or not
+int extcarve_is_empty(char buf[EXT2_BLOCK_SIZE])
+{
+int i=0,ret=0;
+
+      for (i = 0; i < EXT2_BLOCK_SIZE; i++)
+	if (buf[i]==0x0 || isblank(buf[i])==0 || iscntrl(buf[i])==0 )
+	  continue;
+	else
+	   break;
+
+        if (i < EXT2_BLOCK_SIZE){
+  		   return 1;
+                    }
+
+    return -1;
 }
