@@ -49,9 +49,11 @@ static struct argp_option options[] = {
    "recover files with increase the file/block limit (default 48KB if block size=4KB)"},
   {"recover", 'g', 0, 0, "recover files with default settings."},
   {"salvage", 's', 0, 0, "[TODO] Salvage/Recover partial data too. "},
+  {"salvage", 't', 0, 0, "Recover file by type "},
   {0}
 };
-
+char FILE_TYPE[5];
+int use_file_fmt;
 int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
 const char *argp_program_version = "extcarve 0.6 (02-Jul-2011) ";
@@ -93,6 +95,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
       break;
     case 's':
       arguments->flag = 4;
+      break;
+    case 't':
+      arguments->flag = 5;
       break;
     default:
       return ARGP_ERR_UNKNOWN;
@@ -163,6 +168,14 @@ main (int argc, char *argv[])
     {
       do_dump_unused (current_fs);
     }
+  if (arguments.flag == 5)
+    {
+      use_file_fmt=1;
+      printf ("Please enter the file type :(gif/jpg/pdf/tex/txt/tgz/zip/htm/cpp/php):");
+      scanf ("%s", FILE_TYPE);
+      printf ("\n Searching for file type %s", FILE_TYPE);
+      do_dump_unused (current_fs);
+    }
 
   ext2fs_close (current_fs);
   printf ("\n extcarve is completed");
@@ -198,7 +211,7 @@ do_dump_unused (ext2_filsys current_fs)
 
       blk_cnt++;
       //cleanup buf before read
-      memset (buf, '\0', 4096);
+      memset (buf, '\0', EXT2_BLOCK_SIZE);
       retval = io_channel_read_blk (current_fs->io, blk, 1, buf);
       if (retval)
 	{
@@ -226,6 +239,12 @@ do_dump_unused (ext2_filsys current_fs)
 
       retval = extcarve_search4header (buf, &needle, blk);
       last_searched_blk = blk;
+
+	//When recover by file format , If found dotpart is different than FILE_TYPE ,then reset.
+	if (use_file_fmt && (strcmp (needle.dotpart, FILE_TYPE) != 0)){
+	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
+		retval=0;
+	} 
 
       if (retval == 1 || needle.header_found == 1)
 	{			//fresh header
@@ -258,7 +277,9 @@ do_dump_unused (ext2_filsys current_fs)
 	  //printf("\nheader found again. reset.");
 	  memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
 	}
-      else;			//printf("no header at all");
+      else  ; //printf("no header at all");
+		
+	
     }
 
   printf ("\n Scanning completed");
@@ -306,7 +327,7 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
 	}
 	
       if(blk!=needle->footer_blk)
-	f_size+=4096;
+	f_size+=EXT2_BLOCK_SIZE;
       write (temfd, buf, EXT2_BLOCK_SIZE);
     }
   close (temfd);
@@ -646,14 +667,14 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 }
 
 int
-extcarve_is_EOF (int i, char buf[4096])
+extcarve_is_EOF (int i, char buf[EXT2_BLOCK_SIZE])
 {
-  char newbuf[4096];
-  char tmpbuf[4096];
+  char newbuf[EXT2_BLOCK_SIZE];
+  char tmpbuf[EXT2_BLOCK_SIZE];
   int n = 0, m = 0, j = 0, k = 0, ret = -1;
 
-  memset (&newbuf, '\0', 4096);
-  memset (&tmpbuf, '\0', 4096);
+  memset (&newbuf, '\0', EXT2_BLOCK_SIZE);
+  memset (&tmpbuf, '\0', EXT2_BLOCK_SIZE);
 
   k = i;
   m = k + 8;			//m position
