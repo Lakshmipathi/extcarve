@@ -37,7 +37,7 @@ struct arguments
 struct extcarve_meta
 {
 //indicates whether header/footer is found.
-  int header_found, footer_found;
+  int header_found, footer_found, footer_offset;
   unsigned long header_blk;
   unsigned long footer_blk;
   char dotpart[4];
@@ -54,7 +54,7 @@ static struct argp_option options[] = {
 
 int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
-const char *argp_program_version = "extcarve 0.5 (26-Jun-2011) ";
+const char *argp_program_version = "extcarve 0.6 (02-Jul-2011) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
 
@@ -125,7 +125,7 @@ main (int argc, char *argv[])
   printf ("\nPlease enter the device name:");
   scanf ("%s", device);
   printf
-    ("\n Please enter the output directory - (You must provide  separate partition/drive\'s directory :");
+    ("\nPlease enter the output directory - (You must provide  separate partition/drive\'s directory) :");
   scanf ("%s", restore_device_dir);
 
   retval =
@@ -267,7 +267,7 @@ do_dump_unused (ext2_filsys current_fs)
 int
 extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
 {
-  unsigned long blk;
+  unsigned long blk,f_size=0;
   unsigned char buf[EXT2_BLOCK_SIZE];
   unsigned int i;
   errcode_t retval, f_retval;
@@ -303,11 +303,18 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
 	{
 	  //      com_err(argv[0], retval, "While reading block\n");
 	  o_O ("Error while reading block");
-	  return;
 	}
+	
+      if(blk!=needle->footer_blk)
+	f_size+=4096;
       write (temfd, buf, EXT2_BLOCK_SIZE);
     }
   close (temfd);
+
+  //Now truncate file to its size,for _those_ format where we got footer-
+   if(needle->footer_offset!=-1)
+   if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
+	o_O("Error while fixing size");
   return 1;
 }
 
@@ -469,6 +476,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	{
 	  needle->footer_blk = blk;
 	  needle->footer_found = 1;
+	  needle->footer_offset=-1;
 	  return 1;
 	}
       return 0;
@@ -484,6 +492,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 		{
 		  needle->footer_blk = blk;
 		  needle->footer_found = 1;
+		  needle->footer_offset=i+2;
 		  return 1;
 		}
 	      else
@@ -501,6 +510,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    {
 	      needle->footer_blk = blk;
 	      needle->footer_found = 1;
+	      needle->footer_offset=i+10;
 	      return 1;
 	    }
 	  else
@@ -515,6 +525,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 		{
 		  needle->footer_blk = blk;
 		  needle->footer_found = 1;
+		  needle->footer_offset=i+1;
 		  return 1;
 		}
 	      else
@@ -532,6 +543,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 		{
 		  needle->footer_blk = blk;
 		  needle->footer_found = 1;
+		  needle->footer_offset=i+4;
 		  return 1;
 		}
 	      else
@@ -545,6 +557,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    {
 	      needle->footer_blk = blk;
 	      needle->footer_found = 1;
+	      needle->footer_offset=i+6;
 	      return 1;
 	    }
 	  else
@@ -557,6 +570,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    {
 	      needle->footer_blk = blk;
 	      needle->footer_found = 1;
+	      needle->footer_offset=i+6;
 	      return 1;
 	    }
 	  else
@@ -569,6 +583,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    {
 	      needle->footer_blk = blk;
 	      needle->footer_found = 1;
+	      needle->footer_offset=-1;
 	      return 1;
 	    }
 	  else
