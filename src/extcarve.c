@@ -44,12 +44,13 @@ struct extcarve_meta
 };
 
 static struct argp_option options[] = {
-  {"grepblk", 'd', 0, 0, "[TODO] Dump a block that matches <magic-string>"},
+  {"grepblk", 'd', 0, 0, "[TODO] Dump a block that matches <magic-string>."},
   {"incrblk", 'i', 0, 0,
-   "recover files with increase the file/block limit (default 48KB if block size=4KB)"},
+   "recover files with increase the file/block limit (default 48KB if block size=4KB)."},
   {"recover", 'g', 0, 0, "recover files with default settings."},
   {"salvage", 's', 0, 0, "[TODO] Salvage/Recover partial data too. "},
-  {"salvage", 't', 0, 0, "Recover file by type "},
+  {"type", 't', 0, 0, "Recover file by type."},
+  {"fileimage", 'f', 0, 0, "Recover from file image."},
   {0}
 };
 char FILE_TYPE[5];
@@ -64,6 +65,7 @@ const char *argp_program_bug_address =
 /* Functions involved. */
 static error_t parse_opt (int, char *, struct argp_state *);
 void do_dump_unused ();
+void do_check_fs (char *);
 
 static char args_doc[] = "";
 static char doc[] =
@@ -99,6 +101,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 't':
       arguments->flag = 5;
       break;
+    case 'f':
+      arguments->flag = 6;
+      break;
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -120,7 +125,7 @@ main (int argc, char *argv[])
   int ans = 0;
   struct arguments arguments;
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
-  if (!(arguments.flag > 0 && arguments.flag < 6))
+  if (!(arguments.flag > 0 && arguments.flag < 7))
     o_O ("For usage type : extcarve --help");
   if (arguments.flag == 2 || arguments.flag == 4)
     {
@@ -132,6 +137,23 @@ main (int argc, char *argv[])
   printf
     ("\nPlease enter the output directory - (You must provide  separate partition/drive\'s directory) :");
   scanf ("%s", restore_device_dir);
+
+  if (arguments.flag == 6 ){
+	printf ("Enter the block size :");
+	scanf("%d",&EXT2_BLOCK_SIZE);
+
+
+        printf("\n Get by file format? Press 1 else 0:");
+	scanf("%d",&use_file_fmt);
+	if(use_file_fmt){
+        printf ("Please enter the file type :(gif/jpg/pdf/tex/txt/tgz/zip/htm/cpp/php):");
+        scanf ("%s", FILE_TYPE);
+	}
+
+
+	do_check_fs(device);
+        return 1;	
+	}
 
   retval =
     ext2fs_open (device, open_flags, superblock, blocksize, unix_io_manager,
@@ -499,21 +521,6 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       return -1;
     }
 
-  //bzip2 .bz2 file
-  if ((buf[0] == 0x42 && buf[1] == 0x5a && buf[2] == 0x68 && buf[3] == 0x39 && buf[4] == 0x31 && buf[5] == 0x41 && buf[6] == 0x59 && buf[7] == 0x26))
-    {
-      //printf ("bz2  header found!!!");
-      if (needle->header_found != 1)
-	{
-	  needle->header_found = 1;
-	  needle->header_blk = blk;
-	  strcpy (needle->dotpart, ".bz2");
-	  return 1;
-	}
-      needle->header_found = -1;
-      return -1;
-    }
-
   //Please add new file type header here
 
 
@@ -542,7 +549,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	  return 1;
 	}
 // MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
-  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0))
+  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0))
     {
 
       if ((extcarve_is_EOF (-8, buf) == 0)
@@ -709,7 +716,7 @@ extcarve_is_EOF (int i, char buf[EXT2_BLOCK_SIZE])
 
   k = i;
   m = k + 8;			//m position
-  n = 4092 - m;			//n chars 
+  n = EXT2_BLOCK_SIZE - 4 - m;			//n chars 
 
   j = 0;
 //      printf("From %d to %d",n,m-1);
@@ -753,4 +760,131 @@ int i=0,ret=0;
                     }
 
     return -1;
+}
+//modified to scan all file images
+void
+do_check_fs(char *device)
+{
+  unsigned long blk, last_searched_blk, blk_cnt = 0;
+  unsigned char buf[EXT2_BLOCK_SIZE];
+  unsigned int i;
+  errcode_t retval, f_retval;
+  struct extcarve_meta needle = { 0 };
+  int fp=0,read_bytes=0;
+
+  fp=open(device,0);
+  if(fp < 0 ){
+	o_O("Unable to open");
+   }
+  //cleanup buf before read
+  memset (buf, '\0', EXT2_BLOCK_SIZE);
+
+  read_bytes=read(fp,&buf,EXT2_BLOCK_SIZE);
+  while (read_bytes > 0){
+      blk_cnt++;
+      blk=blk_cnt;
+      retval = extcarve_search4header (buf, &needle, blk);
+	//When recover by file format , If found dotpart is different than FILE_TYPE ,then reset.
+	if (use_file_fmt && (strcmp (needle.dotpart, FILE_TYPE) != 0)){
+	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
+		retval=0;
+	} 
+
+      if (retval == 1 || needle.header_found == 1)
+	{			//fresh header
+	  f_retval = extcarve_search4footer (buf, &needle, blk);
+	  if (f_retval == -1)
+	    {
+	      //printf("\nfooter mismatch.reset.");
+	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
+	    }
+	  else if (f_retval == 1)
+	    {
+	//      printf ("\nperfect match.recover from %u to %u",needle.header_blk, needle.footer_blk);    //carve_this
+	      extcarve_write_to_fd2 (fp,&needle);
+	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
+	    }
+	  else ;		//printf ("\nNo footer at all");
+	  if ((blk - needle.header_blk) >= DIRECT_BLKS)
+	    {
+	      // printf("\nunable to find footer in DIRECT_BLKS blks so reset");
+	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
+	    }
+	}
+      else if (retval == -1)
+	{
+	  //printf("\nheader found again. reset.");
+	  memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
+	}
+      else  ; //printf("no header at all");
+      memset (buf, '\0', EXT2_BLOCK_SIZE); //cleanup buf before read
+      read_bytes=read(fp,&buf,EXT2_BLOCK_SIZE);
+     }
+  close(fp);
+  printf ("\n Scanning completed");
+}
+
+
+int
+extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
+{
+  unsigned long blk,f_size=0;
+  unsigned char buf[EXT2_BLOCK_SIZE];
+  unsigned int i,count=0;
+  errcode_t retval, f_retval;
+
+  char fname[] = "extcarveXXXXXX";
+  char tmp_dname[100];
+  int temfd;
+
+  /* The trick to get a unique name using mkstemp and unlink the temp.file :-)and then use it. */
+  temfd = mkstemp (fname);
+  close (temfd);
+  unlink (fname);
+  strcpy (tmp_dname, restore_device_dir);
+
+  strcat (tmp_dname, "/");
+  strcat (tmp_dname, fname);
+  strcat (tmp_dname, needle->dotpart);
+
+  temfd = creat (tmp_dname, 0700);
+  if (temfd < 0)
+    {
+      printf
+	("Please check permission for destination directory %s.Something wrong",
+	 restore_device_dir);
+      exit (0);
+    }
+
+  printf("\nRestoring files dir : %s %u %u",restore_device_dir,needle->header_blk,needle->footer_blk);
+
+  count = (needle->footer_blk - needle->header_blk)+1; //no.of blocks to read
+
+	//lseek
+  if (lseek64(fp,EXT2_BLOCK_SIZE*needle->header_blk,0)<0){
+	  o_O ("Error during lseek.");
+	}
+
+	while(count > 0){
+	//read from offset
+ 	retval=read(fp,buf,EXT2_BLOCK_SIZE);
+	      if (retval < 0)
+		{
+		  o_O ("Error while reading block");
+		}
+	
+      		if(count > 1)
+		f_size+=EXT2_BLOCK_SIZE;
+
+      		write (temfd, buf, EXT2_BLOCK_SIZE);
+		count--;
+    	}
+
+  close (temfd);
+  //Now truncate file to its size,for _those_ format where we got footer-
+   if(needle->footer_offset!=-1)
+   if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
+	o_O("Error while fixing size");
+
+  return 1;
 }
