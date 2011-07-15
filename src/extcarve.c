@@ -44,7 +44,7 @@ struct extcarve_meta
 };
 
 static struct argp_option options[] = {
-  {"grepblk", 'd', 0, 0, "[TODO] Dump a block that matches <string>"},
+  {"grepblk", 'd', 0, 0, "[TODO] Dump a block that matches <magic-string>"},
   {"incrblk", 'i', 0, 0,
    "recover files with increase the file/block limit (default 48KB if block size=4KB)"},
   {"recover", 'g', 0, 0, "recover files with default settings."},
@@ -53,8 +53,8 @@ static struct argp_option options[] = {
 };
 
 int EXT2_BLOCK_SIZE;
-int DIRECT_BLKS=11;
-const char *argp_program_version = "extcarve 0.4 (20-Jun-2011) ";
+int DIRECT_BLKS = 11;
+const char *argp_program_version = "extcarve 0.5 (26-Jun-2011) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
 
@@ -117,9 +117,10 @@ main (int argc, char *argv[])
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
   if (!(arguments.flag > 0 && arguments.flag < 6))
     o_O ("For usage type : extcarve --help");
-	if(arguments.flag == 2 || arguments.flag == 4 ){
-		o_O("TODO : will be implemented in next version");
-	}
+  if (arguments.flag == 2 || arguments.flag == 4)
+    {
+      o_O ("TODO : will be implemented in next version");
+    }
 
   printf ("\nPlease enter the device name:");
   scanf ("%s", device);
@@ -162,7 +163,7 @@ main (int argc, char *argv[])
     {
       do_dump_unused (current_fs);
     }
-	
+
   ext2fs_close (current_fs);
   printf ("\n extcarve is completed");
   return 1;
@@ -179,7 +180,7 @@ main (int argc, char *argv[])
 void
 do_dump_unused (ext2_filsys current_fs)
 {
-  unsigned long blk, last_searched_blk,blk_cnt=1;
+  unsigned long blk, last_searched_blk, blk_cnt = 1;
   unsigned char buf[EXT2_BLOCK_SIZE];
   unsigned int i;
   errcode_t retval, f_retval;
@@ -196,6 +197,8 @@ do_dump_unused (ext2_filsys current_fs)
 	continue;
 
       blk_cnt++;
+      //cleanup buf before read
+      memset (buf, '\0', 4096);
       retval = io_channel_read_blk (current_fs->io, blk, 1, buf);
       if (retval)
 	{
@@ -212,7 +215,8 @@ do_dump_unused (ext2_filsys current_fs)
       //              }
 
       printf
-	("\rSearching non-zero unused block : %16lu  Analyzed: %16lu of %16lu", blk,blk_cnt,current_fs->super->s_free_blocks_count);
+	("\rSearching non-zero unused block : %16lu  Analyzed: %16lu of %16lu",
+	 blk, blk_cnt, current_fs->super->s_free_blocks_count);
 
       if ((blk - last_searched_blk) != 1)
 	{
@@ -228,22 +232,21 @@ do_dump_unused (ext2_filsys current_fs)
 	  f_retval = extcarve_search4footer (buf, &needle, blk);
 	  if (f_retval == -1)
 	    {
-	     //printf("\nfooter mismatch.reset.");
+	      //printf("\nfooter mismatch.reset.");
 	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
 	    }
 	  else if (f_retval == 1)
 	    {
-	   //   printf ("\nperfect match.recover from %u to %u",needle.header_blk, needle.footer_blk);
+	      //printf ("\nperfect match.recover from %u to %u",needle.header_blk, needle.footer_blk);
 	      //carve_this
 	      extcarve_write_to_fd (current_fs, &needle);
 	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
 	    }
-	  else
-	   ;// printf ("\nNo footer at all");
+	  else;			//printf ("\nNo footer at all");
 
 	  if ((blk - needle.header_blk) >= DIRECT_BLKS)
 	    {
-	     // printf("\nunable to find footer in DIRECT_BLKS blks so reset");
+	      // printf("\nunable to find footer in DIRECT_BLKS blks so reset");
 	      memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
 	    }
 
@@ -252,14 +255,13 @@ do_dump_unused (ext2_filsys current_fs)
 	}
       else if (retval == -1)
 	{
-	 // printf("\nheader found again. reset.");
+	  //printf("\nheader found again. reset.");
 	  memset ((void *) &needle, '\0', sizeof (struct extcarve_meta));
 	}
-      else
-      ;//no header at all
+      else;			//printf("no header at all");
     }
 
-printf("\n Scanning completed");
+  printf ("\n Scanning completed");
 }
 
 int
@@ -308,6 +310,7 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
   close (temfd);
   return 1;
 }
+
 int
 extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
 			struct extcarve_meta *needle, unsigned long blk)
@@ -361,9 +364,9 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
     }
   //pdf 
   if ((buf[0] == 0x25 && buf[1] == 0x50 && buf[2] == 0x44 && buf[3] == 0x46
-       && buf[4] == 0x2D ))
+       && buf[4] == 0x2D))
     {
-      //printf ("pdf header found!!!");
+      //printf ("pdf header found!!!%lu",blk);
       if (needle->header_found != 1)
 	{
 	  needle->header_found = 1;
@@ -402,8 +405,14 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       needle->header_found = -1;
       return -1;
     }
-   //Latex
-if((strcasestr(buf,"\\documentclass")!=NULL) || (strcasestr(buf,"\\input")!=NULL) || (strcasestr(buf,"\\section")!=NULL) || (strcasestr(buf,"\\setlenth")!=NULL) || (strcasestr(buf,"\\relax")!=NULL) || (strcasestr(buf,"\\contentsline")!=NULL)){
+  //Latex
+  if ((strcasestr (buf, "\\documentclass") != NULL)
+      || (strcasestr (buf, "\\input") != NULL)
+      || (strcasestr (buf, "\\section") != NULL)
+      || (strcasestr (buf, "\\setlenth") != NULL)
+      || (strcasestr (buf, "\\relax") != NULL)
+      || (strcasestr (buf, "\\contentsline") != NULL))
+    {
 
       //printf ("Latex  header found!!!");
       if (needle->header_found != 1)
@@ -415,9 +424,23 @@ if((strcasestr(buf,"\\documentclass")!=NULL) || (strcasestr(buf,"\\input")!=NULL
 	}
       needle->header_found = -1;
       return -1;
-     }
+    }
 
-    //Please add new file type header here
+  //MATLAB .fig 
+  if (memcmp (buf, "MATLAB", 6) == 0)
+    {
+      //printf ("fig  header found!!!");
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".fig");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+  //Please add new file type header here
 
 
   return 0;
@@ -428,18 +451,44 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 			struct extcarve_meta *needle, unsigned long blk)
 {
   int i = 0;
+// MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
+  if (strcmp (needle->dotpart, ".fig") == 0)
+    {
+
+      if ((extcarve_is_EOF (-8, buf) == 0)
+	  || (extcarve_is_EOF (256, buf) == 0)
+	  || (extcarve_is_EOF (512, buf) == 0)
+	  || (extcarve_is_EOF (1024, buf) == 0)
+	  || (extcarve_is_EOF (2048, buf) == 0)
+	  || (extcarve_is_EOF (3072, buf) == 0)
+	  || (extcarve_is_EOF (3136, buf) == 0)
+	  || (extcarve_is_EOF (3200, buf) == 0)
+	  || (extcarve_is_EOF (3328, buf) == 0)
+	  || (extcarve_is_EOF (3586, buf) == 0)
+	  || (extcarve_is_EOF (3840, buf) == 0))
+	{
+	  needle->footer_blk = blk;
+	  needle->footer_found = 1;
+	  return 1;
+	}
+      return 0;
+    }
+
   while (i <= EXT2_BLOCK_SIZE - 1)
     {
-      if (buf[i] == 0x00 && buf[i + 1] == 0x3b)
+      if (buf[i] == 0x00 && buf[i + 1] == 0x3b && buf[i + 2] == '\0')
 	{
-	  if (strcmp (needle->dotpart, ".gif") == 0)
+	  if (extcarve_is_EOF (i, buf) == 0)
 	    {
-	      needle->footer_blk = blk;
-	      needle->footer_found = 1;
-	      return 1;
+	      if (strcmp (needle->dotpart, ".gif") == 0)
+		{
+		  needle->footer_blk = blk;
+		  needle->footer_found = 1;
+		  return 1;
+		}
+	      else
+		return -1;
 	    }
-	  else
-	    return -1;
 	}
       //png
 
@@ -460,27 +509,34 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
       //jpg
       if (buf[i] == 0xFF && buf[i + 1] == 0xD9)
 	{
-	  if (strcmp (needle->dotpart, ".jpg") == 0)
+	  if (extcarve_is_EOF (i, buf) == 0)
 	    {
-	      needle->footer_blk = blk;
-	      needle->footer_found = 1;
-	      return 1;
+	      if (strcmp (needle->dotpart, ".jpg") == 0)
+		{
+		  needle->footer_blk = blk;
+		  needle->footer_found = 1;
+		  return 1;
+		}
+	      else
+		return -1;
+
 	    }
-	  else
-	    return -1;
 	}
       //pdf 
       if (buf[i] == 0x25 && buf[i + 1] == 0x25 && buf[i + 2] == 0x45
-	  && buf[i + 3] == 0x4F && buf[i + 4] == 0x46 )
+	  && buf[i + 3] == 0x4F && buf[i + 4] == 0x46)
 	{
-	  if (strcmp (needle->dotpart, ".pdf") == 0)
+	  if (extcarve_is_EOF (i, buf) == 0)
 	    {
-	      needle->footer_blk = blk;
-	      needle->footer_found = 1;
-	      return 1;
+	      if (strcmp (needle->dotpart, ".pdf") == 0)
+		{
+		  needle->footer_blk = blk;
+		  needle->footer_found = 1;
+		  return 1;
+		}
+	      else
+		return -1;
 	    }
-	  else
-	    return -1;
 	}
       //C/C++ 
       if ((memcmp (&buf[i], "return", 6) == 0))
@@ -507,7 +563,8 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    return -1;
 	}
       //tex 
-	if((strcasestr(buf,"\\end")!=NULL)){
+      if ((strcasestr (buf, "\\end") != NULL))
+	{
 	  if (strcmp (needle->dotpart, ".tex") == 0)
 	    {
 	      needle->footer_blk = blk;
@@ -518,8 +575,36 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    return -1;
 	}
 
-    //Please add new file type footer here
+      //Please add new file type footer here
       i++;
     }
   return 0;
+}
+
+int
+extcarve_is_EOF (int i, char buf[4096])
+{
+  char newbuf[4096];
+  char tmpbuf[4096];
+  int n = 0, m = 0, j = 0, k = 0, ret = -1;
+
+  memset (&newbuf, '\0', 4096);
+  memset (&tmpbuf, '\0', 4096);
+
+  k = i;
+  m = k + 8;			//m position
+  n = 4092 - m;			//n chars 
+
+  j = 0;
+//      printf("From %d to %d",n,m-1);
+  for (k = m - 1; j < n; k++)
+    newbuf[j++] = buf[k];
+
+  newbuf[j] = '\0';
+
+  ret = memcmp (tmpbuf, newbuf, n);
+  if (ret == 0)
+    return 0;
+  else
+    return 1;
 }

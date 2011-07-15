@@ -3,6 +3,8 @@ extcarve usage:
 Once you have succuessfully installed extcarve from either the binary or source code on separate partition or external drive, now you can use 
 this to recover files from deleted drive/partition.
 
+NOTE: If you are using ext4,then its wise to use -i option (See below) with large file size.
+
 
 Setup-1:
 --------

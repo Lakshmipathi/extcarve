@@ -1,5 +1,12 @@
 ................................................................................................,
 
+2011-06-26  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
+
+	* Release of extcarve 0.5
+	
+			- Added MATLAB .fig file format.
+			- Recovers updated-pdf files(multiple trailers)
+................................................................................................,
 2011-06-20  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
 
 	* Release of extcarve 0.4
