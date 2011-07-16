@@ -57,7 +57,7 @@ char FILE_TYPE[5];
 int use_file_fmt;
 int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
-const char *argp_program_version = "extcarve 0.8 (17-Jul-2011) ";
+const char *argp_program_version = "extcarve 1.0 (17-Jul-2011) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
 
@@ -139,9 +139,8 @@ main (int argc, char *argv[])
   scanf ("%s", restore_device_dir);
 
   if (arguments.flag == 6 ){
-	printf ("Enter the block size :");
+	printf ("Enter the File System block size :");
 	scanf("%d",&EXT2_BLOCK_SIZE);
-
 
         printf("\n Get by file format? Press 1 else 0:");
 	scanf("%d",&use_file_fmt);
