@@ -42,6 +42,15 @@ struct extcarve_meta
   unsigned long footer_blk;
   char dotpart[4];
 };
+struct node {
+	unsigned long headerblk;
+	unsigned long footerblk;
+	int footer_offset;
+	struct node* next;
+	char dotpart[4];  
+	};
+
+struct node *head=NULL;
 
 static struct argp_option options[] = {
   {"grepblk", 'd', 0, 0, "[TODO] Dump a block that matches <magic-string>."},
@@ -79,6 +88,8 @@ int
 extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
 			struct extcarve_meta *needle, unsigned long blk);
 
+void push(struct node**,struct extcarve_meta*);
+void printlist(struct node*);
 static error_t
 parse_opt (int key, char *arg, struct argp_state *state)
 {
@@ -357,6 +368,10 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
    if(needle->footer_offset!=-1)
    if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
 	o_O("Error while fixing size");
+
+  //push details into the list
+  push(&head,needle);
+
   return 1;
 }
 
@@ -900,5 +915,31 @@ extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
    if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
 	o_O("Error while fixing size");
 
-  return 1;
+}
+
+//push data into the list
+
+void push(struct node** headref,struct extcarve_meta* needle){
+
+		struct node* newnode=malloc(sizeof(struct node));
+
+		newnode->headerblk=needle->header_blk;
+		newnode->footerblk=needle->footer_blk;
+		newnode->footer_offset=needle->footer_offset;
+		strcpy(newnode->dotpart,needle->dotpart);
+
+		newnode->next=*headref;
+	
+		*headref=newnode;
+}
+//print the list
+void printlist(struct node *current){
+
+	while(current!=NULL){
+	printf("\n Header blk :%u",current->headerblk);
+	printf("\n Footer blk :%u",current->footerblk);
+	printf("\n Footer offset:%d",current->footer_offset);
+	printf("\n File Type: %s",current->dotpart);
+	current=current->next;
+	}
 }
