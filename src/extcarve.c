@@ -60,12 +60,15 @@ static struct argp_option options[] = {
   {"salvage", 's', 0, 0, "[TODO] Salvage/Recover partial data too. "},
   {"type", 't', 0, 0, "Recover file by type."},
   {"fileimage", 'f', 0, 0, "Recover from file image."},
+  {"analyze", 'a', 0, 0, "Analyze the disk - dont recover."},
   {0}
 };
 char FILE_TYPE[5];
 int use_file_fmt;
 int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
+int analyze_mode=0;
+
 const char *argp_program_version = "extcarve 1.0 (17-Jul-2011) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
@@ -115,6 +118,9 @@ parse_opt (int key, char *arg, struct argp_state *state)
     case 'f':
       arguments->flag = 6;
       break;
+    case 'a':
+      arguments->flag = 7;
+      break;
     default:
       return ARGP_ERR_UNKNOWN;
     }
@@ -136,12 +142,16 @@ main (int argc, char *argv[])
   int ans = 0;
   struct arguments arguments;
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
-  if (!(arguments.flag > 0 && arguments.flag < 7))
+  if (!(arguments.flag > 0 && arguments.flag < 8))
     o_O ("For usage type : extcarve --help");
   if (arguments.flag == 2 || arguments.flag == 4)
     {
       o_O ("TODO : will be implemented in next version");
     }
+  if(arguments.flag==7){
+	analyze_mode=1;
+	
+	}
 
   printf ("\nPlease enter the device name:");
   scanf ("%s", device);
@@ -150,6 +160,7 @@ main (int argc, char *argv[])
   scanf ("%s", restore_device_dir);
 
   if (arguments.flag == 6 ){
+    
 	printf ("Enter the File System block size :");
 	scanf("%d",&EXT2_BLOCK_SIZE);
 
@@ -189,14 +200,14 @@ main (int argc, char *argv[])
 
   EXT2_BLOCK_SIZE = current_fs->blocksize;
 
-  if (arguments.flag == 1)
+  if (arguments.flag == 1 )
     {
       printf ("Please enter increased block limit:(default is 12) :");
       scanf ("%d", &DIRECT_BLKS);
       printf ("\nIncreased blk size from 12 to %d", DIRECT_BLKS);
       do_dump_unused (current_fs);
     }
-  if (arguments.flag == 3)
+  if (arguments.flag == 3  || arguments.flag == 7)
     {
       do_dump_unused (current_fs);
     }
@@ -210,6 +221,8 @@ main (int argc, char *argv[])
     }
 
   ext2fs_close (current_fs);
+  if(analyze_mode)
+	printlist(head); //display the list
   printf ("\n extcarve is completed");
   return 1;
 }
@@ -328,7 +341,7 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
   char fname[] = "extcarveXXXXXX";
   char tmp_dname[100];
   int temfd;
-
+  if(!analyze_mode){
   /* The trick to get a unique name using mkstemp and unlink the temp.file :-)and then use it. */
   temfd = mkstemp (fname);
   close (temfd);
@@ -368,7 +381,7 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
    if(needle->footer_offset!=-1)
    if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
 	o_O("Error while fixing size");
-
+  }
   //push details into the list
   push(&head,needle);
 
@@ -866,6 +879,7 @@ extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
   char tmp_dname[100];
   int temfd;
 
+  if(!analyze_mode){
   /* The trick to get a unique name using mkstemp and unlink the temp.file :-)and then use it. */
   temfd = mkstemp (fname);
   close (temfd);
@@ -914,7 +928,9 @@ extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
    if(needle->footer_offset!=-1)
    if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
 	o_O("Error while fixing size");
-
+	}
+  //push details into the list
+  push(&head,needle);
 }
 
 //push data into the list
@@ -934,12 +950,19 @@ void push(struct node** headref,struct extcarve_meta* needle){
 }
 //print the list
 void printlist(struct node *current){
+char tmp_dname[100];
+int fd;
 
+	  strcpy (tmp_dname, restore_device_dir);
+	  strcat (tmp_dname, "/");
+	  strcat (tmp_dname, "extcarve_analyze.txt");
+	  fd=fopen(tmp_dname,"w+");
+		
 	while(current!=NULL){
-	printf("\n Header blk :%u",current->headerblk);
-	printf("\n Footer blk :%u",current->footerblk);
-	printf("\n Footer offset:%d",current->footer_offset);
-	printf("\n File Type: %s",current->dotpart);
+	fprintf(fd,"\n Header blk :%u",current->headerblk);
+	fprintf(fd,"\n Footer blk :%u",current->footerblk);
+	fprintf(fd,"\n Footer offset:%d",current->footer_offset);
+	fprintf(fd,"\n File Type: %s\n",current->dotpart);
 	current=current->next;
 	}
 }
