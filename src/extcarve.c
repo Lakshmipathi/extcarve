@@ -563,6 +563,20 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       return -1;
     }
 
+ //rpm file
+  if ((buf[0] == 0xed && buf[1] == 0xab && buf[2] == 0xee && buf[3] == 0xdb ))
+    {
+      //printf ("rpm  header found!!!");
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".rpm");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
   //Please add new file type header here
 
 
@@ -591,7 +605,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	  return 1;
 	}
 // MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
-  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0))
+  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0) || (strcmp (needle->dotpart, ".rpm") == 0))
     {
 
       if ((extcarve_is_EOF (-8, buf) == 0)
