@@ -70,7 +70,7 @@ int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
 int analyze_mode=0;
 
-const char *argp_program_version = "extcarve 1.2 (12-Oct-2011) ";
+const char *argp_program_version = "extcarve 1.3 (12-Nov-2011) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
 

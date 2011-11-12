@@ -1,4 +1,12 @@
 ................................................................................................,
+2011-11-12  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
+
+	* Release of extcarve 1.3
+	
+			- Supports ELF(linux binary) file format.
+			- Fix memory leak during recovery.
+			- Fix filename issue.
+................................................................................................,
 2011-10-12  Lakshmipathi.G  <lakshmipathi.g@giis.co.in> or <lakshmipathi.g@gmail.com>
 
 	* Release of extcarve 1.2
