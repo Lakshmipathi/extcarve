@@ -1,0 +1,4 @@
+Next release:
+
+support big-endian machines.
+Fix analyze mode memory issue.  (-a)
