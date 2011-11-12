@@ -51,6 +51,7 @@ struct node {
 	};
 
 struct node *head=NULL;
+unsigned long push_counter=1;
 
 static struct argp_option options[] = {
   {"grepblk", 'd', 0, 0, "[TODO] Dump a block that matches <magic-string>."},
@@ -141,6 +142,11 @@ main (int argc, char *argv[])
   int i = 0;
   int ans = 0;
   struct arguments arguments;
+  int endian=1;
+  char *check_endian=(char *)&endian;
+
+
+
   argp_parse (&argp, argc, argv, 0, 0, &arguments);
   if (!(arguments.flag > 0 && arguments.flag < 8))
     o_O ("For usage type : extcarve --help");
@@ -152,7 +158,13 @@ main (int argc, char *argv[])
 	analyze_mode=1;
 	
 	}
-
+  if (check_endian[0] == 1){
+		printf("\n Host machine is Little Endian.Proceed\n");
+	}
+  else{
+	printf("\n Sorry,as of now extcarve only Little Endian machines.\n Its easy to support Big Endian machine,but I can't find test setup.\nIf you urgently need this support.\nPlease mail me,I\'m  more than happy to help.");
+	exit(0);
+  	}
   printf ("\nPlease enter the device name:");
   scanf ("%s", device);
   printf
@@ -339,7 +351,7 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
   errcode_t retval, f_retval;
 
   char fname[] = "extcarveXXXXXX";
-  char tmp_dname[100];
+  char tmp_dname[100]={'\0'};
   int temfd;
   if(!analyze_mode){
   /* The trick to get a unique name using mkstemp and unlink the temp.file :-)and then use it. */
@@ -347,10 +359,12 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
   close (temfd);
   unlink (fname);
   strcpy (tmp_dname, restore_device_dir);
+  //temporary fix  - need to find the root cause 	
+  needle->dotpart[4]='\0';
 
   strcat (tmp_dname, "/");
   strcat (tmp_dname, fname);
-  strcat (tmp_dname, needle->dotpart);
+  strcat (tmp_dname, needle->dotpart); 
 
   temfd = creat (tmp_dname, 0700);
   if (temfd < 0)
@@ -382,8 +396,9 @@ extcarve_write_to_fd (ext2_filsys current_fs, struct extcarve_meta *needle)
    if(truncate(tmp_dname,f_size+needle->footer_offset)!=0)
 	o_O("Error while fixing size");
   }
-  //push details into the list
-  push(&head,needle);
+  //push details into the list - iff analyze mode
+  if(analyze_mode)
+	  push(&head,needle);
 
   return 1;
 }
@@ -577,6 +592,19 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       needle->header_found = -1;
       return -1;
     }
+ //ELF file
+  if ((buf[0] == 0x7F && buf[1] == 0x45 && buf[2] == 0x4C && buf[3] == 0x46 ))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".elf");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
   //Please add new file type header here
 
 
@@ -605,7 +633,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	  return 1;
 	}
 // MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
-  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0) || (strcmp (needle->dotpart, ".rpm") == 0))
+  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0) || (strcmp (needle->dotpart, ".rpm") == 0) || (strcmp (needle->dotpart, ".elf") == 0))
     {
 
       if ((extcarve_is_EOF (-8, buf) == 0)
@@ -890,7 +918,7 @@ extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
   errcode_t retval, f_retval;
 
   char fname[] = "extcarveXXXXXX";
-  char tmp_dname[100];
+  char tmp_dname[100]={0};
   int temfd;
 
   if(!analyze_mode){
@@ -899,10 +927,11 @@ extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
   close (temfd);
   unlink (fname);
   strcpy (tmp_dname, restore_device_dir);
-
+  //temporary fix  - need to find the root cause 	
+  needle->dotpart[4]='\0';
   strcat (tmp_dname, "/");
   strcat (tmp_dname, fname);
-  strcat (tmp_dname, needle->dotpart);
+  strcat (tmp_dname, needle->dotpart); 
 
   temfd = creat (tmp_dname, 0700);
   if (temfd < 0)
@@ -950,17 +979,36 @@ extcarve_write_to_fd2 (int fp, struct extcarve_meta *needle)
 //push data into the list
 
 void push(struct node** headref,struct extcarve_meta* needle){
+		extern unsigned long push_counter;
 
-		struct node* newnode=malloc(sizeof(struct node));
-
+		struct node* newnode=NULL;
+		newnode=malloc(sizeof(struct node));
+		
 		newnode->headerblk=needle->header_blk;
 		newnode->footerblk=needle->footer_blk;
 		newnode->footer_offset=needle->footer_offset;
+  		//temporary fix  - need to find the root cause 	
+	        needle->dotpart[4]='\0';
 		strcpy(newnode->dotpart,needle->dotpart);
 
 		newnode->next=*headref;
 	
 		*headref=newnode;
+
+		if (push_counter % 50  == 0 ){
+			printlist(*headref);
+			//delete list
+			struct node *current= *headref;
+			struct node *next;
+			while(current->next !=NULL){
+			next=current->next;
+			free(current);
+			current=next;
+			}
+		*headref=NULL;
+		}
+
+		push_counter++;
 }
 //print the list
 void printlist(struct node *current){
