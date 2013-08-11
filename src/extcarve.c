@@ -70,7 +70,7 @@ int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
 int analyze_mode=0;
 
-const char *argp_program_version = "extcarve 1.3 (12-Nov-2011) ";
+const char *argp_program_version = "extcarve 1.4 (11-Aug-2013) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
 
@@ -518,7 +518,7 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       return -1;
     }
   //mp3 file
-    if (buf[0] == 0x49 && buf[1] == 0x44 && buf[2] == 0x33  && (buf[3]==0x02 || buf[3]==0x03 || buf[3]==0x04) && buffer[4]==0x00)
+    if (buf[0] == 0x49 && buf[1] == 0x44 && buf[2] == 0x33  && (buf[3]==0x02 || buf[3]==0x03 || buf[3]==0x04) && buf[4]==0x00)
     {
       //printf ("mp3  header found!!!");
       if (needle->header_found != 1)
