@@ -517,6 +517,21 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       needle->header_found = -1;
       return -1;
     }
+  //mp3 file
+    if (buf[0] == 0x49 && buf[1] == 0x44 && buf[2] == 0x33  && (buf[3]==0x02 || buf[3]==0x03 || buf[3]==0x04) && buffer[4]==0x00)
+    {
+      //printf ("mp3  header found!!!");
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".mp3");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
 
   //MATLAB .fig 
   if (memcmp (buf, "MATLAB", 6) == 0)
@@ -690,6 +705,24 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	  else
 	    return -1;
 	}
+      //mp3
+      if (buf[i] == 0x54 && buf[i+1] == 0x41 && buf[i+2] == 0x47)
+	{
+	  if (extcarve_is_EOF (i, buf) == 0)
+	    {
+	      if (strcmp (needle->dotpart, ".mp3") == 0)
+		{
+		  needle->footer_blk = blk;
+		  needle->footer_found = 1;
+		  needle->footer_offset=i+1;
+		  return 1;
+		}
+	      else
+		return -1;
+
+	    }
+	}
+
       //jpg
       if (buf[i] == 0xFF && buf[i + 1] == 0xD9)
 	{
