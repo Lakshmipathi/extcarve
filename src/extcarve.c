@@ -40,14 +40,14 @@ struct extcarve_meta
   int header_found, footer_found, footer_offset;
   unsigned long header_blk;
   unsigned long footer_blk;
-  char dotpart[4];
+  char dotpart[6];
 };
 struct node {
 	unsigned long headerblk;
 	unsigned long footerblk;
 	int footer_offset;
 	struct node* next;
-	char dotpart[4];  
+	char dotpart[6];
 	};
 
 struct node *head=NULL;
@@ -64,13 +64,13 @@ static struct argp_option options[] = {
   {"analyze", 'a', 0, 0, "Analyze the disk - dont recover."},
   {0}
 };
-char FILE_TYPE[5];
+char FILE_TYPE[6];
 int use_file_fmt;
 int EXT2_BLOCK_SIZE;
 int DIRECT_BLKS = 11;
 int analyze_mode=0;
 
-const char *argp_program_version = "extcarve 1.4 (11-Aug-2013) ";
+const char *argp_program_version = "extcarve 1.5 (18-Nov-2025) ";
 const char *argp_program_bug_address =
   "<http://groups.google.com/group/giis-users>";
 
@@ -179,7 +179,15 @@ main (int argc, char *argv[])
         printf("\n Get by file format? Press 1 else 0:");
 	scanf("%d",&use_file_fmt);
 	if(use_file_fmt){
-        printf ("Please enter the file type :(gif/jpg/pdf/tex/txt/tgz/zip/htm/cpp/php):");
+        printf ("Please enter the file type:\n");
+        printf ("Images: gif/jpg/png/bmp/tiff/webp/ico/psd\n");
+        printf ("Audio: mp3/wav/flac/ogg/m4a/wma\n");
+        printf ("Video: mp4/avi/mkv/mov/flv/mpeg\n");
+        printf ("Documents: pdf/docx/xlsx/pptx/rtf/odt/tex/txt\n");
+        printf ("Archives: zip/tgz/bz2/rar/7z/xz/rpm\n");
+        printf ("Code: cpp/php\n");
+        printf ("Other: fig/elf/exe/db/pst/iso\n");
+        printf ("Enter file type: ");
         scanf ("%s", FILE_TYPE);
 	}
 
@@ -226,7 +234,15 @@ main (int argc, char *argv[])
   if (arguments.flag == 5)
     {
       use_file_fmt=1;
-      printf ("Please enter the file type :(gif/jpg/pdf/tex/txt/tgz/zip/htm/cpp/php):");
+      printf ("Please enter the file type:\n");
+      printf ("Images: gif/jpg/png/bmp/tiff/webp/ico/psd\n");
+      printf ("Audio: mp3/wav/flac/ogg/m4a/wma\n");
+      printf ("Video: mp4/avi/mkv/mov/flv/mpeg\n");
+      printf ("Documents: pdf/docx/xlsx/pptx/rtf/odt/tex/txt\n");
+      printf ("Archives: zip/tgz/bz2/rar/7z/xz/rpm\n");
+      printf ("Code: cpp/php\n");
+      printf ("Other: fig/elf/exe/db/pst/iso\n");
+      printf ("Enter file type: ");
       scanf ("%s", FILE_TYPE);
       printf ("\n Searching for file type %s", FILE_TYPE);
       do_dump_unused (current_fs);
@@ -620,6 +636,413 @@ extcarve_search4header (unsigned char buf[EXT2_BLOCK_SIZE],
       needle->header_found = -1;
       return -1;
     }
+
+  //BMP - Windows Bitmap
+  if ((buf[0] == 0x42 && buf[1] == 0x4D))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".bmp");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //TIFF - Tagged Image File Format (Little Endian)
+  if ((buf[0] == 0x49 && buf[1] == 0x49 && buf[2] == 0x2A && buf[3] == 0x00))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".tiff");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //TIFF - Tagged Image File Format (Big Endian)
+  if ((buf[0] == 0x4D && buf[1] == 0x4D && buf[2] == 0x00 && buf[3] == 0x2A))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".tiff");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //WebP
+  if ((buf[0] == 0x52 && buf[1] == 0x49 && buf[2] == 0x46 && buf[3] == 0x46 && buf[8] == 0x57 && buf[9] == 0x45 && buf[10] == 0x42 && buf[11] == 0x50))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".webp");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //ICO - Windows Icon
+  if ((buf[0] == 0x00 && buf[1] == 0x00 && buf[2] == 0x01 && buf[3] == 0x00))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".ico");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //PSD - Adobe Photoshop
+  if ((buf[0] == 0x38 && buf[1] == 0x42 && buf[2] == 0x50 && buf[3] == 0x53))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".psd");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //WAV - Waveform Audio File Format
+  if ((buf[0] == 0x52 && buf[1] == 0x49 && buf[2] == 0x46 && buf[3] == 0x46 && buf[8] == 0x57 && buf[9] == 0x41 && buf[10] == 0x56 && buf[11] == 0x45))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".wav");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //FLAC - Free Lossless Audio Codec
+  if ((buf[0] == 0x66 && buf[1] == 0x4C && buf[2] == 0x61 && buf[3] == 0x43))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".flac");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //OGG - Ogg Vorbis
+  if ((buf[0] == 0x4F && buf[1] == 0x67 && buf[2] == 0x67 && buf[3] == 0x53))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".ogg");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //M4A/AAC - MPEG-4 Audio
+  if ((buf[4] == 0x66 && buf[5] == 0x74 && buf[6] == 0x79 && buf[7] == 0x70 && buf[8] == 0x4D && buf[9] == 0x34 && buf[10] == 0x41))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".m4a");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //WMA - Windows Media Audio
+  if ((buf[0] == 0x30 && buf[1] == 0x26 && buf[2] == 0xB2 && buf[3] == 0x75 && buf[4] == 0x8E && buf[5] == 0x66 && buf[6] == 0xCF && buf[7] == 0x11))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".wma");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //MP4 - MPEG-4 Video (ftyp)
+  if ((buf[4] == 0x66 && buf[5] == 0x74 && buf[6] == 0x79 && buf[7] == 0x70))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".mp4");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //AVI - Audio Video Interleave
+  if ((buf[0] == 0x52 && buf[1] == 0x49 && buf[2] == 0x46 && buf[3] == 0x46 && buf[8] == 0x41 && buf[9] == 0x56 && buf[10] == 0x49 && buf[11] == 0x20))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".avi");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //MKV - Matroska Video
+  if ((buf[0] == 0x1A && buf[1] == 0x45 && buf[2] == 0xDF && buf[3] == 0xA3))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".mkv");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //MOV - QuickTime Movie
+  if ((buf[4] == 0x66 && buf[5] == 0x74 && buf[6] == 0x79 && buf[7] == 0x70 && buf[8] == 0x71 && buf[9] == 0x74))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".mov");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //FLV - Flash Video
+  if ((buf[0] == 0x46 && buf[1] == 0x4C && buf[2] == 0x56 && buf[3] == 0x01))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".flv");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //MPEG - Moving Picture Experts Group
+  if ((buf[0] == 0x00 && buf[1] == 0x00 && buf[2] == 0x01 && (buf[3] >= 0xB0 && buf[3] <= 0xBF)))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".mpeg");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //DOCX - Microsoft Word (Office Open XML)
+  if ((buf[0] == 0x50 && buf[1] == 0x4B && buf[2] == 0x03 && buf[3] == 0x04) && (memcmp(&buf[30], "word/", 5) == 0 || memcmp(&buf[38], "word/", 5) == 0))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".docx");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //XLSX - Microsoft Excel (Office Open XML)
+  if ((buf[0] == 0x50 && buf[1] == 0x4B && buf[2] == 0x03 && buf[3] == 0x04) && (memcmp(&buf[30], "xl/", 3) == 0 || memcmp(&buf[38], "xl/", 3) == 0))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".xlsx");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //PPTX - Microsoft PowerPoint (Office Open XML)
+  if ((buf[0] == 0x50 && buf[1] == 0x4B && buf[2] == 0x03 && buf[3] == 0x04) && (memcmp(&buf[30], "ppt/", 4) == 0 || memcmp(&buf[38], "ppt/", 4) == 0))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".pptx");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //RTF - Rich Text Format
+  if ((buf[0] == 0x7B && buf[1] == 0x5C && buf[2] == 0x72 && buf[3] == 0x74 && buf[4] == 0x66))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".rtf");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //ODT - OpenDocument Text
+  if ((buf[0] == 0x50 && buf[1] == 0x4B && buf[2] == 0x03 && buf[3] == 0x04) && (memcmp(&buf[30], "mimetype", 8) == 0))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".odt");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //RAR - Roshal Archive
+  if ((buf[0] == 0x52 && buf[1] == 0x61 && buf[2] == 0x72 && buf[3] == 0x21 && buf[4] == 0x1A && buf[5] == 0x07))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".rar");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //7Z - 7-Zip Archive
+  if ((buf[0] == 0x37 && buf[1] == 0x7A && buf[2] == 0xBC && buf[3] == 0xAF && buf[4] == 0x27 && buf[5] == 0x1C))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".7z");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //XZ - XZ Compressed Archive
+  if ((buf[0] == 0xFD && buf[1] == 0x37 && buf[2] == 0x7A && buf[3] == 0x58 && buf[4] == 0x5A && buf[5] == 0x00))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".xz");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //EXE - Windows Portable Executable
+  if ((buf[0] == 0x4D && buf[1] == 0x5A))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".exe");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //SQLite Database
+  if ((memcmp(buf, "SQLite format 3", 15) == 0))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".db");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //PST - Outlook Personal Storage
+  if ((buf[0] == 0x21 && buf[1] == 0x42 && buf[2] == 0x44 && buf[3] == 0x4E))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".pst");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
+  //ISO - ISO 9660 CD/DVD Image
+  if ((buf[0x8001] == 0x43 && buf[0x8002] == 0x44 && buf[0x8003] == 0x30 && buf[0x8004] == 0x30 && buf[0x8005] == 0x31))
+    {
+      if (needle->header_found != 1)
+	{
+	  needle->header_found = 1;
+	  needle->header_blk = blk;
+	  strcpy (needle->dotpart, ".iso");
+	  return 1;
+	}
+      needle->header_found = -1;
+      return -1;
+    }
+
   //Please add new file type header here
 
 
@@ -648,7 +1071,7 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	  return 1;
 	}
 // MATLAB like files - which has no footer - Search till EOF . If EOF reached return 1
-  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0) || (strcmp (needle->dotpart, ".rpm") == 0) || (strcmp (needle->dotpart, ".elf") == 0))
+  if ((strcmp (needle->dotpart, ".fig") == 0) || (strcmp (needle->dotpart, ".tgz") == 0) || (strcmp (needle->dotpart, ".txt") == 0) || (strcmp (needle->dotpart, ".bz2") == 0) || (strcmp (needle->dotpart, ".rpm") == 0) || (strcmp (needle->dotpart, ".elf") == 0) || (strcmp (needle->dotpart, ".flac") == 0) || (strcmp (needle->dotpart, ".ogg") == 0) || (strcmp (needle->dotpart, ".m4a") == 0) || (strcmp (needle->dotpart, ".wma") == 0) || (strcmp (needle->dotpart, ".mp4") == 0) || (strcmp (needle->dotpart, ".mkv") == 0) || (strcmp (needle->dotpart, ".mov") == 0) || (strcmp (needle->dotpart, ".flv") == 0) || (strcmp (needle->dotpart, ".mpeg") == 0) || (strcmp (needle->dotpart, ".rar") == 0) || (strcmp (needle->dotpart, ".7z") == 0) || (strcmp (needle->dotpart, ".xz") == 0) || (strcmp (needle->dotpart, ".exe") == 0) || (strcmp (needle->dotpart, ".db") == 0) || (strcmp (needle->dotpart, ".pst") == 0) || (strcmp (needle->dotpart, ".iso") == 0) || (strcmp (needle->dotpart, ".tiff") == 0) || (strcmp (needle->dotpart, ".webp") == 0) || (strcmp (needle->dotpart, ".ico") == 0) || (strcmp (needle->dotpart, ".psd") == 0) || (strcmp (needle->dotpart, ".wav") == 0) || (strcmp (needle->dotpart, ".avi") == 0) || (strcmp (needle->dotpart, ".bmp") == 0))
     {
 
       if ((extcarve_is_EOF (-8, buf) == 0)
@@ -797,17 +1220,34 @@ extcarve_search4footer (unsigned char buf[EXT2_BLOCK_SIZE],
 	    return -1;
 	}
 
-      //zip 
+      //zip
       if (buf[i] == 0x4b && buf[i + 1] == 0x05 && buf[i + 2] == 0x06
 	  && buf[i + 3] == 0x00)
 	{
 	  if (extcarve_is_EOF (i, buf) == 0)
 	    {
-	      if (strcmp (needle->dotpart, ".zip") == 0)
+	      if ((strcmp (needle->dotpart, ".zip") == 0) || (strcmp (needle->dotpart, ".docx") == 0) || (strcmp (needle->dotpart, ".xlsx") == 0) || (strcmp (needle->dotpart, ".pptx") == 0) || (strcmp (needle->dotpart, ".odt") == 0))
 		{
 		  needle->footer_blk = blk;
 		  needle->footer_found = 1;
 		  needle->footer_offset=i+4;
+		  return 1;
+		}
+	      else
+		return -1;
+	    }
+	}
+
+      //RTF
+      if (buf[i] == 0x7D && buf[i + 1] == 0x00)
+	{
+	  if (extcarve_is_EOF (i, buf) == 0)
+	    {
+	      if (strcmp (needle->dotpart, ".rtf") == 0)
+		{
+		  needle->footer_blk = blk;
+		  needle->footer_found = 1;
+		  needle->footer_offset=i+1;
 		  return 1;
 		}
 	      else
